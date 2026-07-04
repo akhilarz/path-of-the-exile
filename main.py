@@ -559,7 +559,7 @@ def generate_poe2_dungeon(floor_num):
                 mid_y = (node.y + ROOM_SIZE//2 + other.y + ROOM_SIZE//2) // 2 
  
                 # Create door rect 
-                if abs(node.x - other.x)  - other.y): 
+                if abs(node.x - other.x) > abs(node.y - other.y): 
                     # Horizontal connection 
                     door_x = max(node.x, other.x) + ROOM_SIZE - TILE_SIZE 
                     door_y = mid_y - 25 
