@@ -473,137 +473,115 @@ class Door:
             pygame.draw.circle(screen, WHITE, (cx, cy), 8, 2)
             pygame.draw.line(screen, WHITE, (cx-4, cy+4), (cx+4, cy+4), 2)
 
-import random 
-import pygame 
- 
-TILE_SIZE = 40 
-ROOM_SIZE = 400 
- 
-class DungeonNode: 
-    def __init__(self, x, y, node_type="normal"): 
-        self.x = x 
-        self.y = y 
-        self.rect = pygame.Rect(x, y, ROOM_SIZE, ROOM_SIZE) 
-        self.node_type = node_type  # "start", "normal", "elite", "boss" 
-        self.connections = [] 
-        self.cleared = False 
-        self.doors = []  # [(door_rect, connected_node_index)] 
- 
-def generate_poe2_dungeon(floor_num): 
-    """Generate POE2-style node map""" 
-    nodes = [] 
-    walls = [] 
-    enemies = [] 
-    items = [] 
-    doors = []  # [(rect, node_a, node_b)] 
- 
-    num_nodes = min(3 + floor_num, 8) 
- 
-    # Center positions 
-    spacing = ROOM_SIZE + 120 
-    cols = 3 
-    rows = (num_nodes + 2) // 3 
-    start_x = 200 
-    start_y = 100 
- 
-    # Generate nodes in a connected grid 
-    positions = [] 
-    for row in range(rows): 
-        for col in range(cols): 
-            if len(positions) 
-                break 
-            x = start_x + col * spacing + random.randint(-30, 30) 
-            y = start_y + row * spacing + random.randint(-30, 30) 
-            positions.append((x, y)) 
- 
-    # Create nodes 
-    for i, (x, y) in enumerate(positions): 
-        if i == 0: 
-            ntype = "start" 
-        elif i == len(positions) - 1: 
-            ntype = "boss" 
-            ntype = "elite" 
-        else: 
-            ntype = "normal" 
-        nodes.append(DungeonNode(x, y, ntype)) 
- 
-    # Connect nodes (grid connections + random extras) 
-    for i, node in enumerate(nodes): 
-        # Connect right 
-        right_idx = i + 1 
-            node.connections.append(right_idx) 
-            nodes[right_idx].connections.append(i) 
- 
-        # Connect down 
-        down_idx = i + cols 
-            node.connections.append(down_idx) 
-            nodes[down_idx].connections.append(i) 
- 
-    # Build walls and doors for each node 
-    for i, node in enumerate(nodes): 
-        # Room walls 
-        for wx in range(node.x, node.x + ROOM_SIZE, TILE_SIZE): 
-            if wx not in [node.x + ROOM_SIZE//2 - TILE_SIZE]:  # Leave gap for doors 
-                walls.append(pygame.Rect(wx, node.y, TILE_SIZE, TILE_SIZE)) 
-                walls.append(pygame.Rect(wx, node.y + ROOM_SIZE - TILE_SIZE, TILE_SIZE, TILE_SIZE)) 
-        for wy in range(node.y, node.y + ROOM_SIZE, TILE_SIZE): 
-            walls.append(pygame.Rect(node.x, wy, TILE_SIZE, TILE_SIZE)) 
-            walls.append(pygame.Rect(node.x + ROOM_SIZE - TILE_SIZE, wy, TILE_SIZE, TILE_SIZE)) 
- 
-        # Create doors for connections (only once per pair) 
-        for conn in node.connections: 
-            if conn   # Only process each connection once 
-                other = nodes[conn] 
-                # Determine door position (between the two nodes) 
-                mid_x = (node.x + ROOM_SIZE//2 + other.x + ROOM_SIZE//2) // 2 
-                mid_y = (node.y + ROOM_SIZE//2 + other.y + ROOM_SIZE//2) // 2 
- 
-                # Create door rect 
-                if abs(node.x - other.x) > abs(node.y - other.y): 
-                    # Horizontal connection 
-                    door_x = max(node.x, other.x) + ROOM_SIZE - TILE_SIZE 
-                    door_y = mid_y - 25 
-                    door_rect = pygame.Rect(door_x, door_y, TILE_SIZE, 50) 
-                    # Remove wall at door position 
-                else: 
-                    # Vertical connection 
-                    door_x = mid_x - 25 
-                    door_y = max(node.y, other.y) + ROOM_SIZE - TILE_SIZE 
-                    door_rect = pygame.Rect(door_x, door_y, 50, TILE_SIZE) 
- 
-                doors.append({"rect": door_rect, "node_a": i, "node_b": conn, "locked": True}) 
- 
-        # Spawn enemies 
-        if node.node_type == "start": 
-            continue  # No enemies in start 
-        elif node.node_type == "boss": 
-            from enemy import Enemy 
-            enemies.append(Enemy(node.x + ROOM_SIZE//2, node.y + ROOM_SIZE//2, "boss", floor_num)) 
-        elif node.node_type == "elite": 
-            from enemy import Enemy 
-            for _ in range(random.randint(4, 6)): 
-                ex = node.x + random.randint(60, ROOM_SIZE - 60) 
-                ey = node.y + random.randint(60, ROOM_SIZE - 60) 
-                etype = random.choice(["skeleton", "zombie", "mage"]) 
-                enemies.append(Enemy(ex, ey, etype, floor_num)) 
-        else: 
-            from enemy import Enemy 
-            for _ in range(random.randint(2, 4)): 
-                ex = node.x + random.randint(60, ROOM_SIZE - 60) 
-                ey = node.y + random.randint(60, ROOM_SIZE - 60) 
-                etype = random.choice(["skeleton", "zombie", "archer", "mage"]) 
-                enemies.append(Enemy(ex, ey, etype, floor_num)) 
- 
-        # Spawn loot 
-        from items import generate_loot 
-        loot_count = 3 if node.node_type == "boss" else random.randint(1, 2) 
-        for _ in range(loot_count): 
-            ix = node.x + random.randint(60, ROOM_SIZE - 60) 
-            iy = node.y + random.randint(60, ROOM_SIZE - 60) 
-            items.append((ix, iy, generate_loot(floor_num))) 
- 
-    start_node = nodes[0] 
-    return walls, enemies, items, doors, nodes, start_node
+def generate_dungeon(floor_num):
+    """Generate multiple separate rooms with locked doors"""
+    walls = []
+    enemies = []
+    items = []
+    doors = []
+    
+    # Calculate how many rooms based on floor
+    num_rooms = min(3 + floor_num, 8)
+    rooms = []
+    
+    # Generate rooms in a grid layout
+    cols = 3
+    rows = (num_rooms + cols - 1) // cols
+    
+    room_width = 400
+    room_height = 350
+    spacing_x = 100
+    spacing_y = 100
+    
+    total_width = cols * room_width + (cols + 1) * spacing_x
+    total_height = rows * room_height + (rows + 1) * spacing_y
+    
+    start_x = spacing_x
+    start_y = spacing_y
+    
+    for i in range(num_rooms):
+        col = i % cols
+        row = i // cols
+        
+        rx = start_x + col * (room_width + spacing_x)
+        ry = start_y + row * (room_height + spacing_y)
+        
+        room = pygame.Rect(rx, ry, room_width, room_height)
+        rooms.append(room)
+    
+    # Create walls for each room (separate rooms!)
+    for room in rooms:
+        # Top wall
+        for x in range(room.x, room.x + room.width, TILE_SIZE):
+            walls.append(pygame.Rect(x, room.y, TILE_SIZE, TILE_SIZE))
+        # Bottom wall
+        for x in range(room.x, room.x + room.width, TILE_SIZE):
+            walls.append(pygame.Rect(x, room.y + room.height - TILE_SIZE, TILE_SIZE, TILE_SIZE))
+        # Left wall
+        for y in range(room.y, room.y + room.height, TILE_SIZE):
+            walls.append(pygame.Rect(room.x, y, TILE_SIZE, TILE_SIZE))
+        # Right wall
+        for y in range(room.y, room.y + room.height, TILE_SIZE):
+            walls.append(pygame.Rect(room.x + room.width - TILE_SIZE, y, TILE_SIZE, TILE_SIZE))
+    
+    # Create doors between adjacent rooms
+    for i, room in enumerate(rooms):
+        # Check room to the right
+        if (i + 1) % cols != 0 and i + 1 < len(rooms):
+            next_room = rooms[i + 1]
+            door_x = room.x + room.width - TILE_SIZE
+            door_y = room.y + room.height // 2 - 20
+            # Remove wall where door goes
+            walls = [w for w in walls if not (w.x == door_x and abs(w.y - door_y) < 40)]
+            doors.append(Door(door_x, door_y, TILE_SIZE, 40, i, i + 1))
+        
+        # Check room below
+        if i + cols < len(rooms):
+            below_room = rooms[i + cols]
+            door_x = room.x + room.width // 2 - 20
+            door_y = room.y + room.height - TILE_SIZE
+            walls = [w for w in walls if not (abs(w.x - door_x) < 40 and w.y == door_y)]
+            doors.append(Door(door_x, door_y, 40, TILE_SIZE, i, i + cols))
+    
+    # Spawn enemies in each room (not in start room)
+    for i, room in enumerate(rooms):
+        if i == 0:
+            continue  # Start room has no enemies
+        
+        if i == len(rooms) - 1:
+            # Boss room
+            etypes = ['boss']
+            count = 1
+        else:
+            etypes = ['skeleton', 'zombie', 'archer', 'mage']
+            count = random.randint(3, 6) + floor_num
+        
+        for _ in range(count):
+            ex = room.x + random.randint(60, room.width - 60)
+            ey = room.y + random.randint(60, room.height - 60)
+            enemies.append(Enemy(ex, ey, random.choice(etypes), floor_num))
+        
+        # Loot
+        loot_count = 3 if i == len(rooms) - 1 else random.randint(1, 2)
+        for _ in range(loot_count):
+            ix = room.x + random.randint(60, room.width - 60)
+            iy = room.y + random.randint(60, room.height - 60)
+            items.append((ix, iy, generate_loot(floor_num)))
+    
+    # Add items to start room too
+    for _ in range(2):
+        ix = rooms[0].x + random.randint(60, rooms[0].width - 60)
+        iy = rooms[0].y + random.randint(60, rooms[0].height - 60)
+        items.append((ix, iy, generate_loot(floor_num)))
+    
+    # First room is start room
+    start_room = rooms[0]
+    
+    return walls, enemies, items, start_room, doors, rooms
+
+# =============================================================================
+# UI
+# =============================================================================
 class Button:
     def __init__(self, x, y, w, h, text):
         self.rect = pygame.Rect(x, y, w, h)
@@ -641,7 +619,7 @@ def main():
     floor = 1
     current_room = 0  # Track which room player is in
     
-    walls, enemies, ground_items, start_room, doors, rooms = generate_poe2_dungeon(floor)
+    walls, enemies, ground_items, start_room, doors, rooms = generate_dungeon(floor)
     player.x = start_room.x + start_room.width // 2
     player.y = start_room.y + start_room.height // 2
     
@@ -743,7 +721,7 @@ def main():
                         player = Player(600, 500)
                         floor = 1
                         current_room = 0
-                        walls, enemies, ground_items, start_room, doors, rooms = generate_poe2_dungeon(floor)
+                        walls, enemies, ground_items, start_room, doors, rooms = generate_dungeon(floor)
                         player.x = start_room.x + start_room.width//2
                         player.y = start_room.y + start_room.height//2
                         room_enemies = {}
@@ -897,7 +875,7 @@ def main():
             if all_cleared and len(rooms) > 0:
                 floor += 1
                 current_room = 0
-                walls, enemies, ground_items, start_room, doors, rooms = generate_poe2_dungeon(floor)
+                walls, enemies, ground_items, start_room, doors, rooms = generate_dungeon(floor)
                 player.x = start_room.x + start_room.width // 2
                 player.y = start_room.y + start_room.height // 2
                 player.hp = min(player.max_hp, player.hp + int(player.max_hp * 0.3))
